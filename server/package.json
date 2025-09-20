@@ -1,0 +1,53 @@
+{
+    "name": "blog_app",
+    "version": "1.0.0",
+    "description": "personal blogging app",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "update": "npx npm-check-updates",
+        "dev": "cross-env NODE_ENV=dev nodemon server.js",
+        "start": "cross-env NODE_ENV=prod node server.js",
+        "lint": "eslint",
+        "lint-fix": "eslint --fix",
+        "format-check": "prettier . --check",
+        "format-fix": "prettier . --write",
+        "migrate": "node scripts/runMigration.js",
+        "check-db": "node scripts/runMigration.js --check",
+        "prepare": "husky"
+    },
+    "keywords": [
+        "blog",
+        "app"
+    ],
+    "author": "pankaj",
+    "license": "ISC",
+    "devDependencies": {
+        "@commitlint/cli": "^19.8.1",
+        "@commitlint/config-conventional": "^19.8.1",
+        "@eslint/js": "^9.34.0",
+        "eslint": "^9.34.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-jsdoc": "^54.1.1",
+        "globals": "^16.3.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.5",
+        "nodemon": "^3.1.10",
+        "prettier": "^3.6.2"
+    },
+    "dependencies": {
+        "cloudinary": "^2.7.0",
+        "colorette": "^2.0.20",
+        "cors": "^2.8.5",
+        "cross-env": "^10.0.0",
+        "dotenv-flow": "^4.1.0",
+        "express": "^5.1.0",
+        "express-fileupload": "^1.5.2",
+        "helmet": "^8.1.0",
+        "moment-timezone": "^0.6.0",
+        "pg": "^8.16.3",
+        "react-markdown": "^10.1.0",
+        "winston": "^3.17.0"
+    }
+}
