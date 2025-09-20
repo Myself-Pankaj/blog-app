@@ -77,7 +77,7 @@ export const update_blog = async (req, res, next) => {
 
     try {
         const { id } = req.params
-        const { title, content, tags, category } = req.body
+        const { title, content, tags, category, signature } = req.body
 
         const updates = {}
         if (title !== undefined) {
@@ -94,7 +94,11 @@ export const update_blog = async (req, res, next) => {
         if (category !== undefined) {
             updates.category = category
         }
+        const secretKey = signature
 
+        if (secretKey !== config.blog_secret) {
+            throw new CustomError('You are not authorized to Update a blog', 403)
+        }
         const blog = await BlogModel.getBlogById(id)
 
         let thumbnailUrl = null
@@ -149,17 +153,25 @@ export const update_blog = async (req, res, next) => {
 export const delete_blog = async (req, res, next) => {
     try {
         const { id } = req.params
+        const { secret: secretKey } = req.query
         if (!id) {
             throw new CustomError(generic_msg.invalid_input('Id'), 405)
         }
+        const blog = await BlogModel.getBlogById(id)
 
+        if (!blog) {
+            throw new CustomError(generic_msg.operation_failed('Blog not found'), 404)
+        }
+        if (secretKey !== config.blog_secret) {
+            throw new CustomError('You are not authorized to delete a blog', 403)
+        }
         const isDeleted = await BlogModel.deleteBlog(id)
 
         if (isDeleted === undefined) {
             throw new CustomError(generic_msg.too_many_attempts('Deletion'), 403)
         }
 
-        return httpResponse(req, resizeBy, 200, generic_msg.operation_success('Blog Deleted'), isDeleted)
+        return httpResponse(req, res, 200, generic_msg.operation_success('Blog Deleted'), isDeleted)
     } catch (error) {
         return httpError('Blog Deletion', next, error, req, 500)
     }

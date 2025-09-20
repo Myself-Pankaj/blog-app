@@ -99,7 +99,7 @@ export function Header() {
           <Button
             onClick={() => {
               setMobileMenuOpen(false);
-              router.push("/create-blog");
+              router.push("/create");
             }}
             className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-medium shadow-md hover:shadow-lg transition-all"
           >

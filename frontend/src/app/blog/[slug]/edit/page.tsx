@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 
 import { BlogData } from "@/types/blog";
@@ -11,12 +11,12 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { BlogForm, BlogFormRef } from "@/components/blog/blog-form";
 import {
-  useGetPostsQuery,
+  useGetPostByIdQuery,
   useUpdatePostMutation,
 } from "@/lib/redux/api/blog.api";
 
 interface EditBlogPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export default function EditBlogPage({ params }: EditBlogPageProps) {
@@ -24,18 +24,19 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
   const formRef = useRef<BlogFormRef>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Unwrap the params Promise using React.use()
+  const { slug } = use(params);
+
   // Fetch all blog posts
   const {
     data: blogsResponse,
     isLoading: isFetching,
     error: fetchError,
     refetch,
-  } = useGetPostsQuery();
+  } = useGetPostByIdQuery(slug, { skip: !slug });
 
   // Find the blog post by slug
-  const blogPost = blogsResponse?.data?.find(
-    (post) => post.slug === params.slug
-  );
+  const blogPost = blogsResponse?.data;
 
   // Update mutation
   const [updatePost] = useUpdatePostMutation();
@@ -57,8 +58,6 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
         tags: formData.tags,
         category: formData.category,
         signature: formData.signature,
-        // Note: thumbnail handling might need special consideration
-        // depending on your API implementation
       };
 
       await updatePost(updateData).unwrap();
@@ -67,7 +66,7 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
 
       // Reset form and redirect
       formRef.current?.reset();
-      router.push(`/blog/${params.slug}`); // or wherever you want to redirect
+      router.push(`/blog/${slug}`); // or wherever you want to redirect
     } catch (error: unknown) {
       console.error("Update failed:", error);
 
@@ -108,11 +107,13 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
   // Loading state
   if (isFetching) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-            <p className="text-muted-foreground">Loading blog post...</p>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Loading blog post...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -122,28 +123,32 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
   // Error state
   if (fetchError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center text-red-600">
-              Failed to Load Blog Post
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              {"status" in fetchError && fetchError.status === 404
-                ? "Blog post not found."
-                : "An error occurred while loading the blog post."}
-            </p>
-            <div className="space-x-4">
-              <Button variant="outline" onClick={handleGoBack}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Go Back
-              </Button>
-              <Button onClick={handleRetry}>Try Again</Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-center text-destructive">
+                  Failed to Load Blog Post
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <p className="text-muted-foreground">
+                  {"status" in fetchError && fetchError.status === 404
+                    ? "Blog post not found."
+                    : "An error occurred while loading the blog post."}
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button variant="outline" onClick={handleGoBack}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Go Back
+                  </Button>
+                  <Button onClick={handleRetry}>Try Again</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -151,18 +156,24 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
   // No blog post found
   if (!blogPost) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center">Blog Post Not Found</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button variant="outline" onClick={handleGoBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Go Back
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-center">
+                  Blog Post Not Found
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <Button variant="outline" onClick={handleGoBack}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Go Back
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -176,44 +187,86 @@ export default function EditBlogPage({ params }: EditBlogPageProps) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={handleGoBack}
-          className="mb-4"
-          disabled={isLoading}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-3xl font-bold">Edit Blog Post</h1>
-        <p className="text-muted-foreground mt-2">
-          Update your blog post: {blogPost.title}
-        </p>
-      </div>
-
-      {/* Form */}
-      <BlogForm
-        ref={formRef}
-        initialData={initialData}
-        onSubmit={handleSubmit}
-        disabled={isLoading}
-      />
-
-      {/* Additional Actions */}
-      <div className="max-w-3xl mx-auto mt-6 p-6">
-        <div className="flex justify-between items-center text-sm text-muted-foreground">
-          <span>
-            Last updated:{" "}
-            {new Date(blogPost.updated_at ?? "").toLocaleDateString()}
-          </span>
-          <span>
-            Created: {new Date(blogPost.created_at ?? "").toLocaleDateString()}
-          </span>
+    <div className="min-h-screen bg-background">
+      {/* Sticky Header */}
+      <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center h-16">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoBack}
+              disabled={isLoading}
+              className="mr-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold truncate">
+                Edit: {blogPost.title}
+              </h1>
+            </div>
+          </div>
         </div>
-      </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Page Header */}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Edit Blog Post
+            </h1>
+            <p className="text-muted-foreground">
+              Make changes to your blog post and save when you are ready.
+            </p>
+          </div>
+
+          {/* Blog Form */}
+          <BlogForm
+            ref={formRef}
+            initialData={initialData}
+            onSubmit={handleSubmit}
+            disabled={isLoading}
+          />
+
+          {/* Metadata Footer */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm text-muted-foreground">
+                <div className="space-y-1 sm:space-y-0">
+                  <p>
+                    <span className="font-medium">Created:</span>{" "}
+                    {new Date(blogPost.created_at ?? "").toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
+                  </p>
+                </div>
+                <div className="space-y-1 sm:space-y-0">
+                  <p>
+                    <span className="font-medium">Last updated:</span>{" "}
+                    {new Date(blogPost.updated_at ?? "").toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

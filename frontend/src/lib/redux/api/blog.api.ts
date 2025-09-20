@@ -58,16 +58,19 @@ export const blogApi = createApi({
       query: ({ id, ...rest }) => ({
         url: `/update/${id}`,
         method: "PUT",
-        params: { secret: rest.signature },
+
         body: rest,
       }),
       invalidatesTags: ["Post"],
     }),
 
     // DELETE post
-    deletePost: builder.mutation<{ success: boolean; id: string }, string>({
-      query: (id) => ({
-        url: `/delete/${id}`,
+    deletePost: builder.mutation<
+      { success: boolean; id: string },
+      { id: number; secret: string }
+    >({
+      query: ({ id, secret }) => ({
+        url: `/delete/${id}?secret=${encodeURIComponent(secret)}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Post"],

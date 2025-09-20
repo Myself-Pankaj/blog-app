@@ -1,12 +1,26 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import MarkdownPreviewer from "@/components/blog/md-viewer";
-import { useGetPostByIdQuery } from "@/lib/redux/api/blog.api";
+import {
+  useGetPostByIdQuery,
+  useDeletePostMutation,
+} from "@/lib/redux/api/blog.api";
 import { Blog } from "@/types/blog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertCircle,
   Calendar,
@@ -14,13 +28,16 @@ import {
   ArrowLeft,
   Share2,
   BookOpen,
+  Loader2,
 } from "lucide-react";
-import { BlogCard } from "@/components/blog/blog-card";
+// import { BlogCard } from "@/components/blog/blog-card";
 import Image from "next/image";
 import Link from "next/link";
 import { timeAgo } from "@/lib/utils";
 import { getReadingTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 export default function BlogPage({
   params,
 }: {
@@ -30,10 +47,18 @@ export default function BlogPage({
   // Unwrap the params Promise using React.use()
   const resolvedParams = use(params);
 
+  // State for delete dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [secretKey, setSecretKey] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data, isLoading } = useGetPostByIdQuery(resolvedParams.slug, {
     skip: !resolvedParams.slug,
   });
   const post: Blog | undefined = data?.data;
+
+  // Delete mutation
+  const [deletePost] = useDeletePostMutation();
 
   // Loading state with elegant skeleton
   if (isLoading) {
@@ -85,7 +110,7 @@ export default function BlogPage({
           </Alert>
           <div className="mt-8 text-center">
             <Link
-              href="/blog"
+              href="/"
               className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 font-medium transition-colors group"
             >
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
@@ -98,11 +123,65 @@ export default function BlogPage({
   }
 
   const readingTime = getReadingTime(post.content ?? "");
+
   const handleEdit = () => {
     if (!post?.blog_id) return;
     router.push(`/blog/${post.blog_id}/edit`);
   };
-  const handleDelete = () => {};
+
+  const handleDeleteConfirm = async () => {
+    if (!post?.blog_id || !secretKey.trim()) {
+      toast.error("Please enter the secret key");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // Pass both id (as number) and secret as an object
+      await deletePost({
+        id: post.blog_id,
+        secret: secretKey,
+      }).unwrap();
+
+      toast.success("Blog post deleted successfully!");
+
+      // Close dialog and redirect
+      setIsDeleteDialogOpen(false);
+      setSecretKey("");
+      router.push("/");
+    } catch (error: unknown) {
+      console.error("Delete failed:", error);
+
+      // Handle different error types
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        ("status" in error || "data" in error)
+      ) {
+        const err = error as { status?: number; data?: { message?: string } };
+        if (err.status === 401 || err.status === 403) {
+          toast.error("Invalid secret key. Access denied.");
+        } else if (err.status === 404) {
+          toast.error("Blog post not found.");
+        } else if (err.data?.message) {
+          toast.error(err.data.message);
+        } else {
+          toast.error("Failed to delete blog post. Please try again.");
+        }
+      } else {
+        toast.error("Failed to delete blog post. Please try again.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setSecretKey("");
+  };
+
   // Dummy related posts data
   const relatedPosts: Blog[] = [
     {
@@ -227,25 +306,84 @@ export default function BlogPage({
               </svg>
               Edit
             </button>
-            <button
-              onClick={handleDelete}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-rose-200 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 dark:hover:border-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all duration-200 text-sm"
+
+            {/* Delete Dialog */}
+            <Dialog
+              open={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-              Delete
-            </button>
+              <DialogTrigger asChild>
+                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-rose-200 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 dark:hover:border-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all duration-200 text-sm">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  Delete
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                    <AlertCircle className="w-5 h-5" />
+                    Delete Article
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-600 dark:text-slate-400">
+                    This action cannot be undone. Please enter your secret key
+                    to confirm deletion of {post.title}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="secret-key" className="text-sm font-medium">
+                      Secret Key
+                    </Label>
+                    <Input
+                      id="secret-key"
+                      type="password"
+                      placeholder="Enter your secret key"
+                      value={secretKey}
+                      onChange={(e) => setSecretKey(e.target.value)}
+                      className="col-span-3"
+                      disabled={isDeleting}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDeleteCancel}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDeleteConfirm}
+                    disabled={isDeleting || !secretKey.trim()}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Article"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Share Action (Right) */}

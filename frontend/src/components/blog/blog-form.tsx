@@ -128,7 +128,7 @@ export const BlogForm = forwardRef<BlogFormRef, BlogFormProps>(
     const isFormDisabled = disabled || isSubmitting;
 
     return (
-      <Card className="max-w-3xl mx-auto p-6 shadow-lg dark:shadow-none">
+      <Card className="w-full max-w-3xl mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">
             {initialData ? "Update Blog" : "Create Blog"}
