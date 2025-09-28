@@ -177,6 +177,125 @@ export const delete_blog = async (req, res, next) => {
     }
 }
 
+export const read_all_blog = async (req, res, next) => {
+    try {
+        const { page = 1, limit = 10 } = req.query
+
+        // Validate and sanitize pagination parameters
+        const pageNum = Math.max(1, parseInt(page, 10) || 1)
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10))
+
+        // Calculate offset for database query
+        const offset = (pageNum - 1) * limitNum
+
+        // Get blogs and total count
+        const [blogs, totalCount] = await Promise.all([BlogModel.getAllBlogs(limitNum, offset), BlogModel.getBlogsCount()])
+
+        if (!blogs || totalCount === 0) {
+            throw new CustomError(generic_msg.operation_failed('No blogs found'), 404)
+        }
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalCount / limitNum)
+        const hasNextPage = pageNum < totalPages
+        const hasPrevPage = pageNum > 1
+
+        const pagination = {
+            currentPage: pageNum,
+            totalPages,
+            totalItems: totalCount,
+            itemsPerPage: limitNum,
+            hasNextPage,
+            hasPrevPage,
+            nextPage: hasNextPage ? pageNum + 1 : null,
+            prevPage: hasPrevPage ? pageNum - 1 : null
+        }
+
+        return httpResponse(req, res, 200, generic_msg.operation_success('Reading Blogs'), blogs, null, pagination)
+    } catch (error) {
+        return httpError('Reading Blogs', next, error, req, 500)
+    }
+}
+
+export const read_recent_blogs = async (req, res, next) => {
+    try {
+        const blogs = await BlogModel.getRecentBlogs()
+
+        if (!blogs) {
+            throw new CustomError(generic_msg.operation_failed('Fetching Recent Blogs'), 500)
+        }
+
+        return httpResponse(req, res, 200, generic_msg.operation_success('Fetching Recent Blogs'), blogs)
+    } catch (error) {
+        return httpError('Fetching Recent Blogs', next, error, req, 500)
+    }
+}
+
+export const searchBlogs = async (req, res, next) => {
+    try {
+        const { q: query, page = 1, limit = 10 } = req.query
+
+        // Validate search query
+        if (!query || query.trim() === '') {
+            throw new CustomError(generic_msg.invalid_input('Search query'), 400)
+        }
+
+        // Validate and sanitize pagination parameters
+        const pageNum = Math.max(1, parseInt(page, 10) || 1)
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10))
+
+        // Calculate offset for database query
+        const offset = (pageNum - 1) * limitNum
+
+        // Trim and validate search term
+        const searchTerm = query.trim()
+        if (searchTerm.length < 2) {
+            throw new CustomError(generic_msg.invalid_input('Search query must be at least 2 characters long'), 400)
+        }
+
+        // Get search results and total count
+        const [blogs, totalCount] = await Promise.all([BlogModel.searchBlogs(searchTerm, limitNum, offset), BlogModel.getSearchCount(searchTerm)])
+
+        if (!blogs || totalCount === 0) {
+            return httpResponse(req, res, 200, `No blogs found matching "${searchTerm}"`, [], null, {
+                currentPage: pageNum,
+                totalPages: 0,
+                itemsPerPage: limitNum,
+                hasNextPage: false,
+                hasPrevPage: false
+            })
+        }
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalCount / limitNum)
+        const hasNextPage = pageNum < totalPages
+        const hasPrevPage = pageNum > 1
+
+        const pagination = {
+            currentPage: pageNum,
+            totalPages,
+            totalItems: totalCount,
+            itemsPerPage: limitNum,
+            hasNextPage,
+            hasPrevPage,
+            nextPage: hasNextPage ? pageNum + 1 : null,
+            prevPage: hasPrevPage ? pageNum - 1 : null
+        }
+
+        return httpResponse(
+            req,
+            res,
+            200,
+            generic_msg.operation_success(`Found ${totalCount} blogs matching "${searchTerm}"`),
+            blogs,
+            null,
+            pagination
+        )
+    } catch (error) {
+        return httpError('Searching Blogs', next, error, req, 500)
+    }
+}
+
 export const read_blog = async (req, res, next) => {
     try {
         const { id } = req.params
@@ -193,42 +312,5 @@ export const read_blog = async (req, res, next) => {
         return httpResponse(req, res, 200, generic_msg.operation_success('Reading Blog'), blog)
     } catch (error) {
         return httpError('Reading Blog', next, error, req, 500)
-    }
-}
-
-export const read_all_blog = async (req, res, next) => {
-    try {
-        // Get pagination params from query
-        const page = Number(req.query.page) || 1
-        const limit = Number(req.query.limit) || 10
-
-        if (page < 1 || limit < 1) {
-            return httpResponse(req, res, 400, 'Invalid pagination parameters', null)
-        }
-
-        const { rows: blogs, total, totalPages } = await BlogModel.getAllBlogs(page, limit)
-
-        if (!blogs) {
-            throw new CustomError(generic_msg.operation_failed('Reading Blogs'), 500)
-        }
-
-        const pagination = { page, limit, total, totalPages }
-
-        return httpResponse(req, res, 200, generic_msg.operation_success('Reading Blogs'), blogs, null, pagination)
-    } catch (error) {
-        return httpError('Reading Blogs', next, error, req, 500)
-    }
-}
-export const read_recent_blogs = async (req, res, next) => {
-    try {
-        const blogs = await BlogModel.getRecentBlogs()
-
-        if (!blogs) {
-            throw new CustomError(generic_msg.operation_failed('Fetching Recent Blogs'), 500)
-        }
-
-        return httpResponse(req, res, 200, generic_msg.operation_success('Fetching Recent Blogs'), blogs)
-    } catch (error) {
-        return httpError('Fetching Recent Blogs', next, error, req, 500)
     }
 }

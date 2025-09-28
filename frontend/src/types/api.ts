@@ -27,4 +27,13 @@ export interface Pagination {
   limit: number;
   total: number;
   totalPages: number;
+
+  // Optional properties to maintain backward compatibility
+  totalItems?: number; // Alternative name for total
+  currentPage?: number; // Alternative name for page
+  itemsPerPage?: number; // Alternative name for limit
+  hasPrevPage?: boolean;
+  hasNextPage?: boolean;
+  prevPage?: number | null;
+  nextPage?: number | null;
 }

@@ -19,29 +19,6 @@ const BlogModel = {
         return result.rows[0]
     },
 
-    async getAllBlogs(page = 1, limit = 10) {
-        const offset = (page - 1) * limit
-
-        // Fetch paginated rows
-        const sql = `
-    SELECT * FROM blogs
-    ORDER BY created_at DESC
-    LIMIT $1 OFFSET $2;
-  `
-        const result = await db.query(sql, [limit, offset])
-
-        // Get total count for pagination
-        const countResult = await db.query(`SELECT COUNT(*) FROM blogs`)
-        const total = parseInt(countResult.rows[0].count, 10)
-
-        return {
-            rows: result.rows,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
-        }
-    },
     async updateBlog(blog_id, updates) {
         const fields = []
         const values = []
@@ -65,20 +42,79 @@ const BlogModel = {
         const result = await db.query(sql, values)
         return result.rows[0]
     },
+    async getAllBlogs(limit = 10, offset = 0) {
+        try {
+            const sql = `
+            SELECT * FROM blogs 
+            ORDER BY created_at DESC 
+            LIMIT $1 OFFSET $2;
+        `
 
+            const result = await db.query(sql, [limit, offset])
+            return result.rows
+        } catch (error) {
+            throw error
+        }
+    },
+    async getBlogsCount() {
+        try {
+            const sql = `SELECT COUNT(*) FROM blogs`
+            const result = await db.query(sql)
+            return parseInt(result.rows[0].count, 10)
+        } catch (error) {
+            throw error
+        }
+    },
     async deleteBlog(blog_id) {
         const sql = `DELETE FROM blogs WHERE blog_id = $1 RETURNING *;`
         const result = await db.query(sql, [blog_id])
         return result.rows[0]
     },
-    async getRecentBlogs() {
+
+    async searchBlogs(searchTerm, limit = 10, offset = 0) {
         const sql = `
         SELECT *
         FROM blogs
+        WHERE title ILIKE $1
+           OR category ILIKE $1
+           OR EXISTS (
+               SELECT 1 
+               FROM unnest(tags) t
+               WHERE t ILIKE $1
+           )
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3;
+    `
+
+        const searchPattern = `%${searchTerm}%`
+        const result = await db.query(sql, [searchPattern, limit, offset])
+        return result.rows
+    },
+    async getSearchCount(searchTerm) {
+        const sql = `
+        SELECT COUNT(*) as total
+        FROM blogs
+        WHERE title ILIKE $1
+           OR category ILIKE $1
+           OR EXISTS (
+               SELECT 1 
+               FROM unnest(tags) t 
+               WHERE t ILIKE $1
+           )
+    `
+        const searchPattern = `%${searchTerm}%`
+        const result = await db.query(sql, [searchPattern])
+        return parseInt(result.rows[0].total, 10)
+    },
+    async getRelatedBlogs(tags, excludeBlogId) {
+        const sql = `
+        SELECT *
+        FROM blogs
+        WHERE tags @> $1 AND blog_id != $2
         ORDER BY created_at DESC
         LIMIT 5;
     `
-        const result = await db.query(sql)
+        const result = await db.query(sql, [tags, excludeBlogId])
         return result.rows
     }
 }

@@ -5,6 +5,11 @@ import { ReduxProviders } from "@/components/providers/redux-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/header";
+import { SearchProvider } from "@/components/context/SearchContext";
+import {
+  ClientLayoutWrapper,
+  MobileMenuProvider,
+} from "@/components/providers/client-provider";
 
 const robotoMono = Roboto_Mono({
   variable: "--font-mono",
@@ -21,7 +26,6 @@ export const metadata: Metadata = {
     "A simple production-ready blogging platform built with Next.js 15",
   keywords: ["Next.js 15", "Blog", "SEO", "Node.js"],
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,12 +33,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${robotoMono.variable}  antialiased`}>
+      <body className={`${robotoMono.variable} antialiased`}>
         <ReduxProviders>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <Header />
-            <main className="pt-20">{children}</main>
-            <Toaster />
+            <MobileMenuProvider>
+              <SearchProvider>
+                <Header />
+                <ClientLayoutWrapper>
+                  <main>{children}</main>
+                </ClientLayoutWrapper>
+              </SearchProvider>
+              <Toaster />
+            </MobileMenuProvider>
           </ThemeProvider>
         </ReduxProviders>
       </body>

@@ -75,6 +75,19 @@ export const blogApi = createApi({
       }),
       invalidatesTags: ["Post"],
     }),
+    // SEARCH posts
+    getSearchBlogs: builder.query<
+      GetBlogsResponse,
+      { q: string; page?: number; limit?: number } | void
+    >({
+      query: (params) => {
+        const { q = "", page = 1, limit = 10 } = params || {};
+        return {
+          url: "/search",
+          params: { q, page, limit },
+        };
+      },
+    }),
   }),
 });
 
@@ -85,4 +98,5 @@ export const {
   useUpdatePostMutation,
   useDeletePostMutation,
   useGetRecentPostsQuery,
+  useGetSearchBlogsQuery,
 } = blogApi;
