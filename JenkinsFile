@@ -1,0 +1,101 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_COMPOSE_VERSION = '2.20.0'
+        COMPOSE_PROJECT_NAME = 'myapp'
+        APP_DIR = '/app'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out code...'
+                checkout scm
+            }
+        }
+        
+        stage('Setup Environment') {
+            steps {
+                echo 'Setting up environment variables...'
+                script {
+                    env.EXTERNAL_IP = sh(script: 'curl -s ifconfig.me', returnStdout: true).trim()
+                    echo "External IP: ${env.EXTERNAL_IP}"
+                }
+            }
+        }
+        
+        stage('Prepare Environment Files') {
+            steps {
+                echo 'Preparing .env files...'
+                script {
+                    sh '''
+                        #!/bin/bash
+                        touch .env.dev .env.prod
+                        cp ${APP_DIR}/.env.dev .env.dev
+                        cp ${APP_DIR}/.env.prod .env.prod
+                        
+                        sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.prod
+                        sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.dev
+                        
+                        echo "Environment files prepared with IP: ${EXTERNAL_IP}"
+                    '''
+                }
+            }
+        }
+        
+        stage('Build Frontend') {
+            steps {
+                echo 'Building Frontend Container...'
+                script {
+                    sh '''
+                        cd frontend
+                        docker build -t frontend:${BUILD_NUMBER} .
+                        docker tag frontend:${BUILD_NUMBER} frontend:latest
+                    '''
+                }
+            }
+        }
+        
+        stage('Build Server') {
+            steps {
+                echo 'Building Server Container...'
+                script {
+                    sh '''
+                        cd backend
+                        docker build -t backend:${BUILD_NUMBER} .
+                        docker tag backend:${BUILD_NUMBER} backend:latest
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy with Docker Compose') {
+            steps {
+                echo 'Deploying services with Docker Compose...'
+                script {
+                    sh '''
+                        docker-compose down || true
+                        docker-compose up -d
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+            echo "Frontend: http://localhost:3000"
+            echo "Backend: http://localhost:4040"
+        }
+        failure {
+            echo 'Pipeline failed!'
+            sh 'docker-compose logs'
+        }
+        always {
+            echo 'Cleaning up unused Docker resources...'
+            sh 'docker system prune -f || true'
+        }
+    }
+}

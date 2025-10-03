@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: dockerfile
+    container_name: NODE-backend
+    ports:
+      - "4040:4040"
+    env_file:
+      - ./server/.env.prod
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: NEXT-frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge

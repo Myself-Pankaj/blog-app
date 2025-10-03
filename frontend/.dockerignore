@@ -1,0 +1,42 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+pnpm-lock.yaml
+
+# Build output
+.next
+out
+dist
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.dev
+.env.prod
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor folders
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
+
+# Optional npm files
+package-lock.json
+yarn.lock
+
+# Docker files
+Dockerfile*
+docker-compose*
