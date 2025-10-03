@@ -4,12 +4,11 @@ import logger from './src/utils/logger.js'
 import db from './src/config/db.js'
 
 let server
-
 ;(async () => {
     try {
         // Check database connection before starting server
         await db.healthCheck()
-        server = app.listen(config.port, () => {
+        server = app.listen(config.port, '0.0.0.0', () => {
             logger.info('APP_STARTED', {
                 meta: {
                     PORT: config.port,
