@@ -31,6 +31,8 @@ pipeline {
                 script {
                     sh '''
                         #!/bin/bash
+                        # Create env files in server directory
+                        cd server
                         touch .env.dev .env.prod
                         cp ${APP_DIR}/.env.dev .env.dev
                         cp ${APP_DIR}/.env.prod .env.prod
@@ -39,6 +41,7 @@ pipeline {
                         sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.dev
                         
                         echo "Environment files prepared with IP: ${EXTERNAL_IP}"
+                        cat .env.prod
                     '''
                 }
             }
@@ -50,7 +53,7 @@ pipeline {
                 script {
                     sh '''
                         cd frontend
-                        docker build -t frontend:${BUILD_NUMBER} .
+                        docker build -f dockerfile -t frontend:${BUILD_NUMBER} .
                         docker tag frontend:${BUILD_NUMBER} frontend:latest
                     '''
                 }
@@ -63,7 +66,7 @@ pipeline {
                 script {
                     sh '''
                         cd server
-                        docker build -t backend:${BUILD_NUMBER} .
+                        docker build -f dockerfile -t backend:${BUILD_NUMBER} .
                         docker tag backend:${BUILD_NUMBER} backend:latest
                     '''
                 }
@@ -75,8 +78,39 @@ pipeline {
                 echo 'Deploying services with Docker Compose...'
                 script {
                     sh '''
-                        docker-compose down || true
-                        docker-compose up -d
+                        # Check if docker compose is available
+                        if docker compose version >/dev/null 2>&1; then
+                            echo "Using docker compose (v2)"
+                            docker compose down || true
+                            docker compose up -d --build
+                        elif command -v docker-compose >/dev/null 2>&1; then
+                            echo "Using docker-compose (v1)"
+                            docker-compose down || true
+                            docker-compose up -d --build
+                        else
+                            echo "ERROR: Neither 'docker compose' nor 'docker-compose' found!"
+                            echo "Installing docker-compose..."
+                            sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                            sudo chmod +x /usr/local/bin/docker-compose
+                            docker-compose --version
+                            docker-compose down || true
+                            docker-compose up -d --build
+                        fi
+                    '''
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo 'Verifying deployment...'
+                script {
+                    sh '''
+                        sleep 10
+                        docker ps
+                        echo "Checking if containers are running..."
+                        docker ps | grep NODE-backend || echo "Backend not running!"
+                        docker ps | grep NEXT-frontend || echo "Frontend not running!"
                     '''
                 }
             }
@@ -86,16 +120,37 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully!'
-            echo "Frontend: http://localhost:3000"
-            echo "Backend: http://localhost:4040"
+            echo "Frontend: http://${env.EXTERNAL_IP}:3000"
+            echo "Backend: http://${env.EXTERNAL_IP}:4040"
+            script {
+                sh '''
+                    echo "Container Status:"
+                    docker ps --filter "name=NODE-backend" --filter "name=NEXT-frontend"
+                '''
+            }
         }
         failure {
             echo 'Pipeline failed!'
-            sh 'docker compose logs'
+            script {
+                sh '''
+                    echo "Checking logs..."
+                    if docker compose version >/dev/null 2>&1; then
+                        docker compose logs --tail=100
+                    elif command -v docker-compose >/dev/null 2>&1; then
+                        docker-compose logs --tail=100
+                    else
+                        docker logs NODE-backend || true
+                        docker logs NEXT-frontend || true
+                    fi
+                ''' || true
+            }
         }
         always {
             echo 'Cleaning up unused Docker resources...'
-            sh 'docker system prune -f || true'
+            sh '''
+                docker system prune -f || true
+                docker images -f "dangling=true" -q | xargs -r docker rmi || true
+            ''' || true
         }
     }
 }
