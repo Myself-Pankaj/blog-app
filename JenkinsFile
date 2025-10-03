@@ -62,7 +62,7 @@ pipeline {
                 echo 'Building Server Container...'
                 script {
                     sh '''
-                        cd backend
+                        cd server
                         docker build -t backend:${BUILD_NUMBER} .
                         docker tag backend:${BUILD_NUMBER} backend:latest
                     '''
@@ -91,7 +91,7 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed!'
-            sh 'docker-compose logs'
+            sh 'docker compose logs'
         }
         always {
             echo 'Cleaning up unused Docker resources...'
