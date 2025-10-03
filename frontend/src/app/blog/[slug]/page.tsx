@@ -33,7 +33,6 @@ import {
 // import { BlogCard } from "@/components/blog/blog-card";
 import Image from "next/image";
 import Link from "next/link";
-import { timeAgo } from "@/lib/utils";
 import { getReadingTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -181,31 +180,6 @@ export default function BlogPage({
     setIsDeleteDialogOpen(false);
     setSecretKey("");
   };
-
-  // Dummy related posts data
-  const relatedPosts: Blog[] = [
-    {
-      blog_id: 1,
-      title: "The Future of Web Development",
-      content: "Exploring emerging trends and technologies shaping the web...",
-      tags: ["Web Development", "Technology", "Future"],
-      category: "Technology",
-      thumbnail: "/default-thumbnail.png",
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-15T10:00:00Z",
-    },
-    {
-      blog_id: 2,
-      title: "Design Systems at Scale",
-      content:
-        "Building consistent design languages for large organizations...",
-      tags: ["Design", "Systems", "UI/UX"],
-      category: "Design",
-      thumbnail: "/default-thumbnail.png",
-      created_at: "2024-01-10T09:00:00Z",
-      updated_at: "2024-01-10T09:00:00Z",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -407,43 +381,6 @@ export default function BlogPage({
             <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
               Discover more thoughtfully crafted articles
             </p>
-          </div>
-
-          <div className="grid gap-12 md:gap-8 grid-cols-1 md:grid-cols-2 w-full">
-            {relatedPosts.map((relatedPost) => (
-              <article
-                key={relatedPost.blog_id}
-                className="group cursor-pointer"
-              >
-                <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-lg shadow-slate-900/5 border border-slate-200 dark:border-slate-800 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 hover:-translate-y-1">
-                  <div className="aspect-[16/10] relative overflow-hidden">
-                    <Image
-                      src={relatedPost.thumbnail || "/api/placeholder/400/240"}
-                      alt={relatedPost.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                    />
-                  </div>
-                  <div className="p-8">
-                    <div className="mb-3">
-                      <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-                        {relatedPost.category}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-medium text-slate-900 dark:text-slate-100 mb-3 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      {relatedPost.title}
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed line-clamp-2">
-                      {relatedPost.content}
-                    </p>
-                    <div className="mt-4 text-xs text-slate-500 dark:text-slate-500">
-                      {timeAgo(relatedPost.created_at ?? "")}
-                    </div>
-                  </div>
-                </div>
-              </article>
-            ))}
           </div>
 
           <div className="text-center mt-16">

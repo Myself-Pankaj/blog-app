@@ -32,9 +32,12 @@ app.use(express.static(path.join(__dirname, 'public')))
 
 //Routes
 import blogs from './src/routes/blog.api.routes.js'
+import httpResponse from './src/utils/httpResponse.js'
 
 app.use('/api/v1', blogs)
-
+app.get('/health', (req, res) => {
+    httpResponse(req, res, 200, true, 'Server is healthy')
+})
 // 404 Error handler
 app.use((req, _res, next) => {
     try {
