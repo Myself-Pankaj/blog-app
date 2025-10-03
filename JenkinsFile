@@ -34,8 +34,8 @@ pipeline {
                         # Create env files in server directory
                         cd server
                         touch .env.dev .env.prod
-                        cp ${APP_DIR}/.env.dev ./server/.env.dev
-                        cp ${APP_DIR}/.env.prod ./server/.env.prod
+                        cp ${APP_DIR}/.env.dev .env.dev
+                        cp ${APP_DIR}/.env.prod .env.prod
                         
                         sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.prod
                         sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.dev
