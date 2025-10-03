@@ -133,7 +133,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Empty state */}
+          {/* Empty state  */}
           {!isLoading && posts.length === 0 && !isError && (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="relative">
