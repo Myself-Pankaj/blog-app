@@ -8,6 +8,43 @@ pipeline {
     }
     
     stages {
+        stages {
+        stage('Cleanup Previous Deployment') {
+            steps {
+                echo '========== Cleaning up previous deployment =========='
+                script {
+                    sh '''
+                        set +e  # Don't fail on errors during cleanup
+                        
+                        echo "Stopping and removing all project containers..."
+                        
+                        # Stop and remove using docker compose if available
+                        if docker compose version >/dev/null 2>&1; then
+                            docker compose down -v --remove-orphans
+                        elif command -v docker-compose >/dev/null 2>&1; then
+                            docker-compose down -v --remove-orphans
+                        fi
+                        
+                        # Force remove specific containers if they exist
+                        docker rm -f NODE-backend NEXT-frontend 2>/dev/null || true
+                        
+                        # Remove project containers by name pattern
+                        docker ps -a --filter "name=myapp" -q | xargs -r docker rm -f
+                        
+                        # Remove old images
+                        docker rmi -f frontend:latest backend:latest 2>/dev/null || true
+                        docker images --filter "label=project=myapp" -q | xargs -r docker rmi -f
+                        
+                        # Clean up dangling images and volumes
+                        docker system prune -af --volumes
+                        
+                        echo "Cleanup completed!"
+                        set -e  # Re-enable error checking
+                    '''
+                }
+            }
+        }
+        
         stage('Checkout') {
             steps {
                 echo 'Checking out code...'
