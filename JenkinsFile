@@ -8,7 +8,6 @@ pipeline {
     }
     
     stages {
-        stages {
         stage('Cleanup Previous Deployment') {
             steps {
                 echo '========== Cleaning up previous deployment =========='
@@ -107,7 +106,7 @@ pipeline {
                         echo "Checking for .env files..."
                         ls -la .env.*
                         echo "Checking for .env.prod files..."
-                        ls -la ./server/.env.prod
+                        ls -la .env.prod
                         docker build -f dockerfile -t backend:${BUILD_NUMBER} .
                         docker tag backend:${BUILD_NUMBER} backend:latest
                     '''
