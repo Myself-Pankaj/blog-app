@@ -132,25 +132,31 @@ pipeline {
         failure {
             echo 'Pipeline failed!'
             script {
-                sh '''
-                    echo "Checking logs..."
-                    if docker compose version >/dev/null 2>&1; then
-                        docker compose logs --tail=100
-                    elif command -v docker-compose >/dev/null 2>&1; then
-                        docker-compose logs --tail=100
-                    else
-                        docker logs NODE-backend || true
-                        docker logs NEXT-frontend || true
-                    fi
-                ''' || true
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    sh '''
+                        echo "Checking logs..."
+                        if docker compose version >/dev/null 2>&1; then
+                            docker compose logs --tail=100 || echo "No logs available"
+                        elif command -v docker-compose >/dev/null 2>&1; then
+                            docker-compose logs --tail=100 || echo "No logs available"
+                        else
+                            docker logs NODE-backend 2>&1 || echo "Backend logs not available"
+                            docker logs NEXT-frontend 2>&1 || echo "Frontend logs not available"
+                        fi
+                    '''
+                }
             }
         }
         always {
             echo 'Cleaning up unused Docker resources...'
-            sh '''
-                docker system prune -f || true
-                docker images -f "dangling=true" -q | xargs -r docker rmi || true
-            ''' || true
+            script {
+                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                    sh '''
+                        docker system prune -f
+                        docker images -f "dangling=true" -q | xargs -r docker rmi
+                    '''
+                }
+            }
         }
     }
 }
