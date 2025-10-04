@@ -5,6 +5,8 @@ pipeline {
         DOCKER_COMPOSE_VERSION = '2.20.0'
         COMPOSE_PROJECT_NAME = 'myapp'
         APP_DIR = '/app'
+        DOMAIN = '4biddencoder.tech'
+        DOMAIN_WWW = 'www.4biddencoder.tech'
     }
     
     stages {
@@ -72,8 +74,8 @@ pipeline {
                         touch .env.dev .env.prod
                         cp ${APP_DIR}/.env.dev .env.dev
                         cp ${APP_DIR}/.env.prod .env.prod
-                        
-                        sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.prod
+                        sed -i "s|ALLOWED_ORIGINS=.*|ALLOWED_ORIGINS=https://${DOMAIN},https://${DOMAIN_WWW},http://localhost:3000|g" .env.prod
+                      
                         sed -i '/^ALLOWED_ORIGINS=/s|localhost|'${EXTERNAL_IP}'|g' .env.dev
                         
                         echo "Environment files prepared with IP: ${EXTERNAL_IP}"
