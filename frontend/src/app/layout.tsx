@@ -19,7 +19,7 @@ const robotoMono = Roboto_Mono({
 });
 export const metadata: Metadata = {
   title: {
-    default: "My Blog App",
+    default: "Blogs",
     template: "%s | My Blog App",
   },
   description:
